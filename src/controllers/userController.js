@@ -35,11 +35,16 @@ export const createUser = async (req, res) => {
 
     // 1️ Validate input
     if (!name || !email || !age) {
-      return res.status(400).json({ error: "All fields (name, email, age) are required" });
+      return res
+        .status(400)
+        .json({ error: "All fields (name, email, age) are required" });
     }
 
     // 2️ Prevent duplicate emailsm
-    const [existing] = await db.execute("SELECT id FROM users WHERE email = ?", [email]);
+    const [existing] = await db.execute(
+      "SELECT id FROM users WHERE email = ?",
+      [email]
+    );
     if (existing.length > 0) {
       return res.status(409).json({ error: "Email already exists" });
     }
@@ -59,6 +64,44 @@ export const createUser = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating user:", error.message);
+    res.status(500).json({ Error: "Database query failed" });
+  }
+};
+
+// update user
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, age } = req.body;
+
+    //  Check if user exists
+    const [exist] = await db.execute("SELECT * FROM users WHERE id=?", [id]);
+    if (exist.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Keep old values if no new ones are provided
+    const updatedName = name || exist[0].name;
+    const updatedEmail = email || exist[0].email;
+    const updatedAge = age || exist[0].age;
+
+    //  Update usererror in updating user: Cannot destructure property 'name' of 'req.body' as it is undefined.
+    await db.execute("UPDATE users SET name=?, email=?, age=? WHERE id=?", [
+      updatedName,
+      updatedEmail,
+      updatedAge,
+      id,
+    ]);
+
+    // Send updated data back
+    res.json({
+      id,
+      name: updatedName,
+      email: updatedEmail,
+      age: updatedAge,
+    });
+  } catch (error) {
+    console.error("error in updating user:", error.message);
     res.status(500).json({ Error: "Database query failed" });
   }
 };
